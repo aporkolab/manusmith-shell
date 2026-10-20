@@ -29,7 +29,7 @@
     <picocli.version>4.7.5</picocli.version>
     <jackson.version>2.18.11</jackson.version>
     <micrometer.version>1.15.12</micrometer.version>
-    <dependency-check.version>10.0.4</dependency-check.version>
+    <dependency-check.version>12.2.2</dependency-check.version>
   </properties>
   <dependencies>
     <!-- JavaFX platform-specific dependencies for compilation (Mac) -->
@@ -450,7 +450,7 @@
         <artifactId>dependency-check-maven</artifactId>
         <version>${dependency-check.version}</version>
         <configuration>
-          <!-- NVD API Key will be provided via -Dnvd.api.key system property -->
+          <!-- Read the API key from the environment without exposing it in arguments. -->
           <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
           <nvdApiDelay>2000</nvdApiDelay>
           <nvdMaxRetryCount>10</nvdMaxRetryCount>
@@ -473,7 +473,6 @@
           
           <!-- Fail build settings -->
           <failBuildOnCVSS>8</failBuildOnCVSS>
-          <failBuildOnAnyVulnerability>false</failBuildOnAnyVulnerability>
           
           <!-- Suppression file for false positives -->
           <suppressionFiles>
