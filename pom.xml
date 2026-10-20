@@ -27,8 +27,8 @@
     <mockito.version>5.8.0</mockito.version>
     <testfx.version>4.0.17</testfx.version>
     <picocli.version>4.7.5</picocli.version>
-    <jackson.version>2.16.1</jackson.version>
-    <micrometer.version>1.12.1</micrometer.version>
+    <jackson.version>2.18.11</jackson.version>
+    <micrometer.version>1.15.12</micrometer.version>
     <dependency-check.version>10.0.4</dependency-check.version>
   </properties>
   <dependencies>
@@ -151,7 +151,7 @@
         <version>5.4.0</version>
     </dependency>
     
-    <!-- Other document processing dependencies are provided by manusmith-engine -->
+    <!-- Document processing libraries used directly by the standalone shell. -->
 
     <!-- Logging -->
     <dependency>
@@ -208,11 +208,15 @@
       <version>4.0.2</version>
     </dependency>
 
-    <!-- ManuSmith Engine with ODT support -->
     <dependency>
-      <groupId>org.manusmith</groupId>
-      <artifactId>manusmith-engine-plugin</artifactId>
-            <version>2.0.0</version>
+      <groupId>org.odftoolkit</groupId>
+      <artifactId>odfdom-java</artifactId>
+      <version>0.12.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.vladsch.flexmark</groupId>
+      <artifactId>flexmark-all</artifactId>
+      <version>0.64.8</version>
     </dependency>
     
     <!-- Testing -->
@@ -249,7 +253,7 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
-      <version>3.25.1</version>
+      <version>3.27.7</version>
       <scope>test</scope>
     </dependency>
     <!-- Headless JavaFX testing - modern approach -->
