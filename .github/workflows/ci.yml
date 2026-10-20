@@ -295,7 +295,7 @@ jobs:
 
   release:
     name: Create Release with Native Installers
-    needs: build-cross-platform
+    needs: [build-cross-platform, security-scan]
     runs-on: ubuntu-latest
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')) && success()
     
@@ -410,7 +410,9 @@ jobs:
     name: Security Analysis
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    timeout-minutes: 30
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
     
     steps:
     - name: Checkout Repository
@@ -429,15 +431,50 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Run OWASP Dependency Check
-      continue-on-error: true
-      env:
-        NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    - name: Set current ISO week number
+      run: echo "CACHE_WEEK=$(date +%V)" >> $GITHUB_ENV
+
+    - name: Cache OWASP Dependency-Check Data
+      id: owasp-cache
+      if: always()
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository/org/owasp/dependency-check-data
+        key: ${{ runner.os }}-owasp-12.2-w${{ env.CACHE_WEEK }}
+        restore-keys: |
+          ${{ runner.os }}-owasp-12.2-
+
+    - name: Bootstrap NVD database from the maintained OWASP feed
+      if: steps.owasp-cache.outputs.cache-hit != 'true'
       run: |
-        mvn clean compile || echo "⚠️ Compile failed, continuing with available dependencies"
-        mvn org.owasp:dependency-check-maven:check -Dformat=ALL -Dnvd.api.key=${{ secrets.NVD_API_KEY }} || echo "⚠️ Security scan failed, continuing"
-        echo "🔍 Security scan completed"
-        
+        python3 - <<'PY'
+        from datetime import datetime, timedelta, timezone
+        from urllib.request import urlopen
+
+        url = 'https://dependency-check.github.io/DependencyCheck_Builder/nvd_cache/nvdcve-modified.meta'
+        with urlopen(url, timeout=30) as response:
+            metadata = dict(line.split(':', 1) for line in response.read().decode().splitlines() if ':' in line)
+        updated = datetime.fromisoformat(metadata['lastModifiedDate'].replace('Z', '+00:00'))
+        age = datetime.now(timezone.utc) - updated
+        if not timedelta(0) <= age <= timedelta(hours=48):
+            raise SystemExit(f'NVD bootstrap feed is not fresh: {updated.isoformat()}')
+        print(f'NVD bootstrap feed updated at {updated.isoformat()}')
+        PY
+        mvn -B -ntp org.owasp:dependency-check-maven:update-only \
+          '-DnvdDatafeedUrl=https://dependency-check.github.io/DependencyCheck_Builder/nvd_cache/nvdcve-{0}.json.gz'
+
+    - name: OWASP Dependency Check
+      run: |
+        # Refresh the remaining delta directly from NVD before scanning.
+        mvn -B -ntp org.owasp:dependency-check-maven:check \
+          -DfailBuildOnCVSS=8 \
+          -DfailOnError=true \
+          -DnvdValidForHours=0 \
+          -DsuppressionsFile=dependency-check-suppressions.xml \
+          -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
+          -DdataMirroringType=none
+
+
     - name: Upload Security Report
       uses: actions/upload-artifact@v4
       if: always()
