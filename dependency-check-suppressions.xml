@@ -32,13 +32,13 @@
   <suppress until="2027-04-20Z">
     <notes><![CDATA[
       These two Apache advisories affect the Fuseki server administration UI,
-      not jena-core. This desktop application uses ODFDOM's jena-core model
-      library and has no Fuseki server dependency or administrative upload UI.
+      not the core/base/IRI libraries. This desktop application uses ODFDOM's
+      model libraries and has no Fuseki dependency or administrative upload UI.
       Source: https://jena.apache.org/security/advisories.html
-      Keep this exclusion limited to the exact core artifact and these CVEs;
+      Keep this exclusion limited to these exact library artifacts and CVEs;
       it must not suppress any future Fuseki dependency or unrelated Jena CVE.
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.jena/jena-core@4\.10\.0$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.jena/jena-(core|base|iri)@4\.10\.0$</packageUrl>
     <cve>CVE-2025-50151</cve>
     <cve>CVE-2025-49656</cve>
   </suppress>
