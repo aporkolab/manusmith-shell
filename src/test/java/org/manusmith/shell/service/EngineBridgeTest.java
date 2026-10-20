@@ -207,6 +207,7 @@ class EngineBridgeTest {
                 .doesNotThrowAnyException();
         
         assertThat(outputFile.exists()).isTrue();
+        assertThat(Files.readString(outputFile.toPath())).contains("Test ODT document content.");
     }
 
     @Test
@@ -253,15 +254,12 @@ class EngineBridgeTest {
         return mdFile;
     }
 
-    private File createTestOdtFile(Path tempDir, String filename) throws IOException {
+    private File createTestOdtFile(Path tempDir, String filename) throws Exception {
         File odtFile = tempDir.resolve(filename).toFile();
         
         try (org.odftoolkit.odfdom.doc.OdfTextDocument document = org.odftoolkit.odfdom.doc.OdfTextDocument.newTextDocument()) {
             document.newParagraph("Test ODT document content.");
             document.save(odtFile);
-        } catch (Exception e) {
-            // If ODT creation fails, create a dummy file for testing
-            Files.write(odtFile.toPath(), "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".getBytes());
         }
         
         return odtFile;

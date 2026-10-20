@@ -295,7 +295,7 @@ jobs:
 
   release:
     name: Create Release with Native Installers
-    needs: build-cross-platform
+    needs: [build-cross-platform, security-scan]
     runs-on: ubuntu-latest
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')) && success()
     
