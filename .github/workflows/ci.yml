@@ -69,8 +69,9 @@ jobs:
   build-cross-platform:
     name: Build Native Packages
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'pull_request'
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest

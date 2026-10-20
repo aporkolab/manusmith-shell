@@ -431,7 +431,7 @@
               <mainClass>org.manusmith.shell.MainApp</mainClass>
             </manifest>
           </archive>
-          <finalName>${project.artifactId}-${project.version}-jar-with-dependencies</finalName>
+          <finalName>${project.artifactId}-${project.version}</finalName>
         </configuration>
         <executions>
           <execution>
