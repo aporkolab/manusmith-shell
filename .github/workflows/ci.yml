@@ -19,7 +19,6 @@ permissions:
 
 env:
   JAVA_VERSION: '21'
-  ENGINE_VERSION: '2.0.0'
   
 jobs:
   test:
@@ -42,26 +41,6 @@ jobs:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
-
-    - name: Checkout ManuSmith Engine
-      uses: actions/checkout@v4
-      continue-on-error: true
-      with:
-        repository: APorkolab/manusmith-engine
-        path: manusmith-engine
-        token: ${{ secrets.PAT_TOKEN }}
-        
-    - name: Install ManuSmith Engine Dependency
-      continue-on-error: true
-      run: |
-        if [ -d "manusmith-engine" ]; then
-          cd manusmith-engine
-          mvn clean package -DskipTests -Dspotbugs.skip=true -Ddependency-check.skip=true -Dmaven.javadoc.skip=true -Dmaven.source.skip=true -q
-          mvn install:install-file -Dfile=target/manusmith-engine-plugin-2.0.0.jar -DgroupId=org.manusmith -DartifactId=manusmith-engine-plugin -Dversion=2.0.0 -Dpackaging=jar -q
-          echo "✅ ManuSmith Engine ${{ env.ENGINE_VERSION }} installed"
-        else
-          echo "⚠️ ManuSmith Engine not available, tests will run without engine dependency"
-        fi
 
     - name: Run Tests
       env:
@@ -121,27 +100,6 @@ jobs:
         path: ~/.m2
         key: ${{ matrix.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ matrix.os }}-m2
-
-    - name: Checkout ManuSmith Engine
-      uses: actions/checkout@v4
-      continue-on-error: true
-      with:
-        repository: APorkolab/manusmith-engine
-        path: manusmith-engine
-        token: ${{ secrets.PAT_TOKEN }}
-        
-    - name: Install ManuSmith Engine Dependency
-      shell: bash
-      continue-on-error: true
-      run: |
-        if [ -d "manusmith-engine" ]; then
-          cd manusmith-engine
-          mvn clean package -DskipTests -Dspotbugs.skip=true -Ddependency-check.skip=true -Dmaven.javadoc.skip=true -Dmaven.source.skip=true -q
-          mvn install:install-file -Dfile=target/manusmith-engine-plugin-2.0.0.jar -DgroupId=org.manusmith -DartifactId=manusmith-engine-plugin -Dversion=2.0.0 -Dpackaging=jar -q
-          echo "✅ ManuSmith Engine installed for ${{ matrix.platform }}"
-        else
-          echo "⚠️ ManuSmith Engine not available, build will continue without engine dependency"
-        fi
 
     - name: Windows Debug Info
       if: matrix.os == 'windows-latest'
@@ -403,7 +361,7 @@ jobs:
           ## 🎉 ManuSmith Shell Release ${{ steps.version.outputs.version }}
           
           ### 🔥 What's New
-          - **ManuSmith Engine v${{ env.ENGINE_VERSION }}**: Latest engine integration with full ODT support
+          - **Standalone document processing**: Direct ODT and Markdown library dependencies
           - **Full ODT Support**: Complete OpenDocument Text file processing capabilities  
           - **Enhanced Build System**: Improved CI/CD pipeline with cross-platform builds
           ${{ steps.check_assets.outputs.has_assets == 'true' && '- **Native Desktop Applications**: Ready-to-install packages for macOS and Windows' || '- **Development Build**: Source code and JAR files available' }}
@@ -431,7 +389,7 @@ jobs:
           
           ### 🛠️ Technical Details
           - Java Runtime: OpenJDK ${{ env.JAVA_VERSION }}
-          - Engine Version: v${{ env.ENGINE_VERSION }}
+          - Document processing libraries are included in the application
           - Build: #${{ github.run_number }}
           - Commit: ${{ github.sha }}
         files: |
@@ -469,26 +427,6 @@ jobs:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
-
-    - name: Checkout ManuSmith Engine
-      uses: actions/checkout@v4
-      continue-on-error: true
-      with:
-        repository: APorkolab/manusmith-engine
-        path: manusmith-engine
-        token: ${{ secrets.PAT_TOKEN }}
-        
-    - name: Install ManuSmith Engine Dependency
-      continue-on-error: true
-      run: |
-        if [ -d "manusmith-engine" ]; then
-          cd manusmith-engine
-          mvn clean package -DskipTests -Dspotbugs.skip=true -Ddependency-check.skip=true -Dmaven.javadoc.skip=true -Dmaven.source.skip=true -q
-          mvn install:install-file -Dfile=target/manusmith-engine-plugin-2.0.0.jar -DgroupId=org.manusmith -DartifactId=manusmith-engine-plugin -Dversion=2.0.0 -Dpackaging=jar -q
-          echo "✅ ManuSmith Engine installed for security scan"
-        else
-          echo "⚠️ ManuSmith Engine not available, skipping engine dependency installation"
-        fi
 
     - name: Run OWASP Dependency Check
       continue-on-error: true
