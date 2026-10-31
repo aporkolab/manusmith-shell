@@ -33,10 +33,10 @@ echo "✅ Build successful"
 
 # Check if JavaFX platform-specific JARs exist
 echo "🔍 Checking JavaFX dependencies..."
-FX_BASE=~/.m2/repository/org/openjfx/javafx-base/22.0.2/javafx-base-22.0.2-mac-aarch64.jar
-FX_GRAPHICS=~/.m2/repository/org/openjfx/javafx-graphics/22.0.2/javafx-graphics-22.0.2-mac-aarch64.jar
-FX_CONTROLS=~/.m2/repository/org/openjfx/javafx-controls/22.0.2/javafx-controls-22.0.2-mac-aarch64.jar
-FX_FXML=~/.m2/repository/org/openjfx/javafx-fxml/22.0.2/javafx-fxml-22.0.2-mac-aarch64.jar
+FX_BASE=~/.m2/repository/org/openjfx/javafx-base/23.0.2/javafx-base-23.0.2-mac-aarch64.jar
+FX_GRAPHICS=~/.m2/repository/org/openjfx/javafx-graphics/23.0.2/javafx-graphics-23.0.2-mac-aarch64.jar
+FX_CONTROLS=~/.m2/repository/org/openjfx/javafx-controls/23.0.2/javafx-controls-23.0.2-mac-aarch64.jar
+FX_FXML=~/.m2/repository/org/openjfx/javafx-fxml/23.0.2/javafx-fxml-23.0.2-mac-aarch64.jar
 
 if [ ! -f "$FX_BASE" ] || [ ! -f "$FX_GRAPHICS" ] || [ ! -f "$FX_CONTROLS" ] || [ ! -f "$FX_FXML" ]; then
     echo "⚠️  JavaFX platform-specific JARs not found. Running dependency resolution..."

@@ -21,19 +21,19 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 echo -e "${YELLOW}☕ Checking Java installation...${NC}"
 if ! command -v java &> /dev/null; then
     echo -e "${RED}❌ Java is not installed or not in PATH${NC}"
-    echo "Please install Java 11 or higher from https://adoptopenjdk.net/"
+    echo "Please install Java 21 or higher from https://adoptium.net/"
     exit 1
 fi
 
 JAVA_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
-if [[ "$JAVA_VERSION" -lt "11" ]]; then
-    echo -e "${RED}❌ Java 11 or higher is required. Current version: $JAVA_VERSION${NC}"
+if [[ "$JAVA_VERSION" -lt "21" ]]; then
+    echo -e "${RED}❌ Java 21 or higher is required. Current version: $JAVA_VERSION${NC}"
     exit 1
 fi
 echo -e "${GREEN}✅ Java version: $JAVA_VERSION${NC}"
 
 # Check for JavaFX SDK
-JAVAFX_SDK_PATH="$SCRIPT_DIR/javafx-sdk-22.0.2"
+JAVAFX_SDK_PATH="${JAVAFX_SDK_PATH:-$SCRIPT_DIR/javafx-sdk-23.0.2}"
 if [ ! -d "$JAVAFX_SDK_PATH" ]; then
     echo -e "${RED}❌ JavaFX SDK not found at: $JAVAFX_SDK_PATH${NC}"
     echo "Please run the build script first: ./build-macos.sh"
