@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,6 +26,7 @@ public class ConfigurationService {
     private static final String DEFAULT_CONFIG_FILE = "/application.yml";
     private static final String USER_CONFIG_FILE = "config/application.yml";
     
+    private static final Object INSTANCE_LOCK = new Object();
     static ConfigurationService instance; // package-private for testing
     private ApplicationConfig config;
     private final ObjectMapper yamlMapper;
@@ -36,11 +38,13 @@ public class ConfigurationService {
         loadConfiguration();
     }
 
-    public static synchronized ConfigurationService getInstance() {
-        if (instance == null) {
-            instance = new ConfigurationService();
+    public static ConfigurationService getInstance() {
+        synchronized (INSTANCE_LOCK) {
+            if (instance == null) {
+                instance = new ConfigurationService();
+            }
+            return instance;
         }
-        return instance;
     }
 
     private void loadConfiguration() {
@@ -52,7 +56,9 @@ public class ConfigurationService {
             
             if (Files.exists(userConfigPath)) {
                 logger.info("Loading user configuration from: {}", userConfigPath);
-                config = yamlMapper.readValue(Files.newInputStream(userConfigPath), ApplicationConfig.class);
+                try (InputStream is = Files.newInputStream(userConfigPath)) {
+                    config = yamlMapper.readValue(is, ApplicationConfig.class);
+                }
             } else {
                 // Fall back to default configuration from resources
                 logger.info("Loading default configuration from resources");
@@ -144,7 +150,9 @@ public class ConfigurationService {
         Files.createDirectories(userConfigDir);
         Path userConfigPath = userConfigDir.resolve("application.yml");
         
-        yamlMapper.writeValue(Files.newOutputStream(userConfigPath), config);
+        try (OutputStream os = Files.newOutputStream(userConfigPath)) {
+            yamlMapper.writeValue(os, config);
+        }
         logger.info("User configuration saved to: {}", userConfigPath);
     }
 
