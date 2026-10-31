@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MetricsService {
     private static final Logger logger = LoggerFactory.getLogger(MetricsService.class);
     
+    private static final Object INSTANCE_LOCK = new Object();
     static MetricsService instance; // package-private for testing
     private final MeterRegistry meterRegistry;
     private final ConfigurationService configurationService;
@@ -61,11 +62,13 @@ public class MetricsService {
         }
     }
 
-    public static synchronized MetricsService getInstance() {
-        if (instance == null) {
-            instance = new MetricsService();
+    public static MetricsService getInstance() {
+        synchronized (INSTANCE_LOCK) {
+            if (instance == null) {
+                instance = new MetricsService();
+            }
+            return instance;
         }
-        return instance;
     }
 
     private MeterRegistry createMeterRegistry() {

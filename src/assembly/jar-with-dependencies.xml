@@ -15,27 +15,6 @@
       <useProjectArtifact>true</useProjectArtifact>
       <unpack>true</unpack>
       <scope>runtime</scope>
-      <excludes>
-        <exclude>org.manusmith:manusmith-engine-plugin:jar:*</exclude>
-      </excludes>
-    </dependencySet>
-    
-    <!-- Special handling for manusmith-engine-plugin to exclude conflicting files -->
-    <dependencySet>
-      <outputDirectory>/</outputDirectory>
-      <useProjectArtifact>false</useProjectArtifact>
-      <unpack>true</unpack>
-      <scope>runtime</scope>
-      <includes>
-        <include>org.manusmith:manusmith-engine-plugin:jar:*</include>
-      </includes>
-      <unpackOptions>
-        <excludes>
-          <exclude>application.yml</exclude>
-          <exclude>logback.xml</exclude>
-          <exclude>META-INF/spring.factories</exclude>
-        </excludes>
-      </unpackOptions>
     </dependencySet>
   </dependencySets>
   

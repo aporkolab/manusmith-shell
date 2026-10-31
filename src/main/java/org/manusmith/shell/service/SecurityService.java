@@ -10,7 +10,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -20,16 +22,17 @@ import java.util.regex.Pattern;
 public class SecurityService {
     private static final Logger logger = LoggerFactory.getLogger(SecurityService.class);
     
+    /**
+     * Characters that are reserved on at least one supported platform (Windows is the strictest),
+     * plus ASCII control characters. Letters of any script are allowed, so manuscripts such as
+     * "Ádám - Mű.docx" are accepted.
+     */
+    private static final Pattern RESERVED_FILENAME_CHARS = Pattern.compile("[<>:\"/\\\\|?*\\x00-\\x1F]");
+
     private final ConfigurationService configurationService;
-    private final Pattern pathTraversalPattern;
-    private final Pattern filenamePattern;
-    
+
     public SecurityService() {
         this.configurationService = ConfigurationService.getInstance();
-        // Pattern to detect path traversal attempts
-        this.pathTraversalPattern = Pattern.compile(".*(\\.\\./|\\.\\.\\\\).*");
-        // Pattern for safe filenames (alphanumeric, spaces, hyphens, underscores, dots)
-        this.filenamePattern = Pattern.compile("^[a-zA-Z0-9\\s\\-_.]+$");
     }
 
     /**
@@ -53,7 +56,7 @@ public class SecurityService {
         }
 
         // Check for path traversal attempts
-        if (pathTraversalPattern.matcher(filePath).matches()) {
+        if (containsParentReference(file.toPath())) {
             logger.warn("Path traversal attempt detected: {}", filePath);
             throw new SecurityException("Path traversal attempts are not allowed");
         }
@@ -67,20 +70,29 @@ public class SecurityService {
 
         // Check user home restriction
         if (securityConfig.getFileAccess().isRestrictToUserHome()) {
-            String userHome = System.getProperty("user.home");
-            if (!filePath.startsWith(userHome)) {
+            Path userHome = Path.of(System.getProperty("user.home")).toAbsolutePath().normalize();
+            if (!file.toPath().toAbsolutePath().normalize().startsWith(userHome)) {
                 throw new SecurityException("File access restricted to user home directory");
             }
         }
 
         // Sanitize filename if required
         if (securityConfig.getValidation().isSanitizeFilenames()) {
-            if (!filenamePattern.matcher(file.getName()).matches()) {
+            if (file.getName().isEmpty() || RESERVED_FILENAME_CHARS.matcher(file.getName()).find()) {
                 throw new SecurityException("Filename contains invalid characters: " + file.getName());
             }
         }
 
         logger.debug("File access validation passed: {}", filePath);
+    }
+
+    private static boolean containsParentReference(Path path) {
+        for (Path element : path) {
+            if ("..".equals(element.toString())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -94,7 +106,7 @@ public class SecurityService {
         List<String> blockedExtensions = configurationService.getSecurityConfig()
                 .getFileAccess().getBlockedExtensions();
         
-        return blockedExtensions.contains(extension.toLowerCase());
+        return blockedExtensions.contains(extension.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -122,7 +134,7 @@ public class SecurityService {
         }
 
         // Remove or replace invalid characters
-        String sanitized = filename.replaceAll("[^a-zA-Z0-9\\s\\-_.]", "_");
+        String sanitized = RESERVED_FILENAME_CHARS.matcher(filename).replaceAll("_");
         
         // Limit length
         int maxLength = Math.min(255, configurationService.getSecurityConfig()
@@ -173,19 +185,12 @@ public class SecurityService {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] fileBytes = Files.readAllBytes(file.toPath());
-            byte[] hashBytes = digest.digest(fileBytes);
-            
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hashBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            
-            String checksum = sb.toString();
+            String checksum = HexFormat.of().formatHex(digest.digest(fileBytes));
             logger.debug("File checksum calculated: {} -> {}", file.getName(), checksum);
             
             return checksum;
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
+            throw new IllegalStateException("SHA-256 algorithm not available", e);
         }
     }
 

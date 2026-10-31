@@ -8,6 +8,8 @@ import javafx.util.Duration;
 import org.manusmith.shell.service.EngineBridge;
 import org.manusmith.shell.service.StatusService;
 import org.manusmith.shell.service.ThemeService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -17,6 +19,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.image.BufferedImage;
 
 public class TrayIntegration {
+    private static final Logger logger = LoggerFactory.getLogger(TrayIntegration.class);
 
     private final Stage stage;
     private final EngineBridge engineBridge;
@@ -29,13 +32,17 @@ public class TrayIntegration {
         this.engineBridge = engineBridge;
     }
 
-    public void setupTray() {
+    /**
+     * Installs the tray icon.
+     *
+     * @return {@code true} if the icon is in the system tray, so hiding the main window is safe
+     */
+    public boolean setupTray() {
         if (!SystemTray.isSupported()) {
-            System.err.println("System tray is not supported.");
-            return;
+            logger.warn("System tray is not supported.");
+            return false;
         }
 
-        Platform.setImplicitExit(false);
         this.trayIcon = new TrayIcon(createPlaceholderImage(), "ManuSmith Shell");
         trayIcon.setImageAutoSize(true);
 
@@ -45,8 +52,12 @@ public class TrayIntegration {
         try {
             SystemTray.getSystemTray().add(trayIcon);
         } catch (AWTException e) {
-            System.err.println("Failed to add tray icon: " + e.getMessage());
+            logger.warn("Failed to add tray icon: {}", e.getMessage());
+            return false;
         }
+        // Only keep the FX runtime alive without windows once the tray offers a way back.
+        Platform.setImplicitExit(false);
+        return true;
     }
 
     private PopupMenu createPopupMenu() {
@@ -126,7 +137,8 @@ public class TrayIntegration {
                 }
             }
         } catch (Exception e) {
-            // Ignore exceptions, e.g. "clipboard unavailable"
+            // The clipboard is routinely unavailable while another app owns it; retry on the next tick.
+            logger.trace("Clipboard check skipped: {}", e.getMessage());
         }
     }
 

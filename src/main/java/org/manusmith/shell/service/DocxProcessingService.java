@@ -1,7 +1,16 @@
 package org.manusmith.shell.service;
 
-import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
+import org.apache.poi.xwpf.usermodel.UnderlinePatterns;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.manusmith.shell.dto.ConvertRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -9,14 +18,15 @@ import java.io.IOException;
 import java.util.List;
 
 public class DocxProcessingService {
+    private static final Logger logger = LoggerFactory.getLogger(DocxProcessingService.class);
 
     public void processDocument(ConvertRequest request) throws IOException {
         try (FileInputStream fis = new FileInputStream(request.inputFile());
              XWPFDocument document = new XWPFDocument(fis)) {
 
             if (request.formattingPrefs() != null && request.formattingPrefs().italicToUnderline()) {
-                System.out.println("Applying italic-to-underline conversion...");
-                convertItalicToUnderline(document);
+                logger.debug("Applying italic-to-underline conversion");
+                convertItalicToUnderline(document.getBodyElements());
             }
 
             try (FileOutputStream fos = new FileOutputStream(request.outputFile())) {
@@ -25,61 +35,25 @@ public class DocxProcessingService {
         }
     }
 
-    private void convertItalicToUnderline(XWPFDocument document) {
-        for (XWPFParagraph p : document.getParagraphs()) {
-            // This is tricky because we can't modify the list of runs while iterating.
-            // A common approach is to get the runs, and then work with indexes.
-            for (int i = p.getRuns().size() - 1; i >= 0; i--) {
-                XWPFRun run = p.getRuns().get(i);
-                if (run.isItalic()) {
-                    String text = run.getText(0);
-                    if (text == null || text.isEmpty()) {
-                        continue;
+    /**
+     * Converts italic runs to underlined runs in place, so every other run property
+     * (text with tabs and breaks, font, size, colour, bold) is preserved. Tables are
+     * walked recursively because manuscripts sometimes keep text in layout tables.
+     */
+    private void convertItalicToUnderline(List<IBodyElement> elements) {
+        for (IBodyElement element : elements) {
+            if (element instanceof XWPFParagraph paragraph) {
+                for (XWPFRun run : paragraph.getRuns()) {
+                    if (run.isItalic()) {
+                        run.setItalic(false);
+                        run.setUnderline(UnderlinePatterns.SINGLE);
                     }
-
-                    // Copy properties BEFORE removing the run to avoid XML disconnect
-                    String fontFamily = null;
-                    try {
-                        fontFamily = run.getFontFamily();
-                    } catch (Exception e) {
-                        // Ignore if font family can't be retrieved
+                }
+            } else if (element instanceof XWPFTable table) {
+                for (XWPFTableRow row : table.getRows()) {
+                    for (XWPFTableCell cell : row.getTableCells()) {
+                        convertItalicToUnderline(cell.getBodyElements());
                     }
-                    
-                    int fontSize = -1;
-                    try {
-                        // Use getFontSizeAsDouble() for the newer API
-                        Double fontSizeDouble = run.getFontSizeAsDouble();
-                        if (fontSizeDouble != null) {
-                            fontSize = fontSizeDouble.intValue();
-                        }
-                    } catch (Exception e) {
-                        // Ignore if font size can't be retrieved
-                    }
-                    
-                    boolean isBold = false;
-                    try {
-                        isBold = run.isBold();
-                    } catch (Exception e) {
-                        // Ignore if bold status can't be retrieved
-                    }
-
-                    // Remove the old run
-                    p.removeRun(i);
-
-                    // Create a new run with the same text and properties, but underlined
-                    XWPFRun newRun = p.insertNewRun(i);
-                    newRun.setText(text);
-                    newRun.setUnderline(UnderlinePatterns.SINGLE);
-
-                    // Copy other properties
-                    if (fontFamily != null) {
-                        newRun.setFontFamily(fontFamily);
-                    }
-                    if (fontSize != -1) {
-                       newRun.setFontSize(fontSize);
-                    }
-                    newRun.setBold(isBold);
-                    // Not setting italic, as we are replacing it.
                 }
             }
         }

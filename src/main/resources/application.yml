@@ -2,7 +2,7 @@
 
 application:
   name: ManuSmith Shell
-  version: 1.0.0-SNAPSHOT
+  version: 2.0.0
   description: Professional manuscript formatting and document processing application
 
 # UI Configuration

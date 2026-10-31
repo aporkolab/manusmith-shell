@@ -11,7 +11,7 @@ Kényelmes, egyszerű **UI/CLI**, ami elrejti az engine részleteit, és 1–2 k
 | **MVP** (Shunn formázás) |  Implementálva | Az `italic → underline` konverzió működik. |
 | **Cover Letter** | Implementálva | A kísérőlevél-generátor működik. |
 | **TypoKit** | Implementálva | Alapvető tipográfiai javítások (HU/DE/EN) és jelenettörés-normalizálás megvalósítva. |
-| **QuickConvert** | Teljesen implementálva | Támogatott konverziók: `.txt`↔`.docx`, `.md`→`.txt`, `.odt`↔`.txt`, `.odt`↔`.docx`. |
+| **QuickConvert** | Implementálva | Támogatott konverziók: `.txt`↔`.docx`, `.md`→`.txt`, `.odt`→`.txt`. |
 | **CrossClip Lite** | Implementálva | Tálcaikon, téma váltó és vágólap-tisztító funkcióval. |
 
 ---
@@ -86,9 +86,8 @@ Kényelmes, egyszerű **UI/CLI**, ami elrejti az engine részleteit, és 1–2 k
 
 3. **Integration**
 
-   * Engine JAR-t dependency-ként behúzza (v2.0.0).
-   * Teljes ODT (OpenDocument Text) támogatás a manusmith-engine v2.0.0 verzióval.
-   * A shell sosem implementál parsingot, csak felhasználja.
+   * A shell jelenleg önállóan fut: a dokumentumkezelést közvetlenül az Apache POI (DOCX), ODF Toolkit (ODT) és flexmark (Markdown) könyvtárak végzik.
+   * A `manusmith-engine` nem build-függőség; ha visszakerül, az engine API-ját a `service` réteg mögé kell kötni.
 
 ---
 
@@ -106,3 +105,37 @@ Kényelmes, egyszerű **UI/CLI**, ami elrejti az engine részleteit, és 1–2 k
 * Metaadat-bekérés
 * Opcionális beállítások
 * Mentés és státuszvisszajelzés
+
+---
+
+## Fejlesztés
+
+### Stack
+
+| Komponens | Verzió |
+| :--- | :--- |
+| Java | 21 (LTS) |
+| JavaFX | 23.0.2 (az utolsó JDK 21-et támogató sor) |
+| Maven | 3.9+ (a repóban lévő `./mvnw` 3.9.11-et használ) |
+| Apache POI | 6.0.0 |
+| ODF Toolkit (odfdom) | 0.13.0 |
+| flexmark | 0.64.8 |
+| JUnit / TestFX | 6.1 / 4.0.18 |
+
+### Parancsok
+
+```bash
+./mvnw clean verify -Ddependency-check.skip=true   # build + tesztek + SpotBugs + fat JAR
+./mvnw test                                         # csak a tesztek (headless Monocle)
+./mvnw -Prun-javafx javafx:run                      # futtatás fejlesztői módban (a profilban állítsd a javafx.platform-ot: linux, win, mac-aarch64)
+java -jar target/manusmith-shell-2.0.0-jar-with-dependencies.jar
+./mvnw org.owasp:dependency-check-maven:check       # OWASP függőség-ellenőrzés
+```
+
+Ékezetes fájlnevekkel futó tesztekhez UTF-8 locale kell (pl. `LC_ALL=C.UTF-8`); ennek hiányában az érintett teszt kihagyásra kerül.
+
+### Konfiguráció
+
+* Alapértelmezett beállítások: `src/main/resources/application.yml`.
+* Felhasználói felülírás: `~/.manusmith-shell/config/application.yml` (ha létezik, ez töltődik be).
+* Környezeti változók: `NVD_API_KEY` (opcionális, csak az OWASP-ellenőrzés gyorsításához; CI-ban secretként).

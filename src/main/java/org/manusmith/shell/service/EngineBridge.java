@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,6 +19,9 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 /**
  * Enterprise-grade document processing bridge with monitoring, logging, and async capabilities.
@@ -24,6 +29,10 @@ import java.util.concurrent.Executors;
  */
 public class EngineBridge {
     private static final Logger logger = LoggerFactory.getLogger(EngineBridge.class);
+
+    // Quotes may open at the start of a line or after whitespace and never span paragraphs.
+    private static final Pattern DOUBLE_QUOTED = Pattern.compile("(?m)(^|\\s)\"([^\"\\n]*)\"");
+    private static final Pattern SINGLE_QUOTED = Pattern.compile("(?m)(^|\\s)'([^'\\n]*)'");
     
     private final DocxProcessingService docxProcessingService;
     private final MetricsService metricsService;
@@ -38,9 +47,19 @@ public class EngineBridge {
         this.securityService = new SecurityService();
         
         int threadPoolSize = configurationService.getPerformanceConfig().getThreadPoolSize();
-        this.executorService = Executors.newFixedThreadPool(threadPoolSize);
+        this.executorService = Executors.newFixedThreadPool(threadPoolSize, daemonThreadFactory());
         
         logger.info("EngineBridge initialized with thread pool size: {}", threadPoolSize);
+    }
+
+    private static ThreadFactory daemonThreadFactory() {
+        AtomicInteger counter = new AtomicInteger();
+        return runnable -> {
+            // Daemon threads so an idle pool never keeps the JVM alive after the UI exits.
+            Thread thread = new Thread(runnable, "engine-bridge-" + counter.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        };
     }
 
     /**
@@ -99,7 +118,7 @@ public class EngineBridge {
                 try {
                     process(request);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new UncheckedIOException(e);
                 }
             });
         }
@@ -108,7 +127,7 @@ public class EngineBridge {
             try {
                 process(request);
             } catch (IOException e) {
-                throw new RuntimeException("Async processing failed", e);
+                throw new UncheckedIOException("Async processing failed", e);
             }
         }, executorService);
     }
@@ -147,35 +166,39 @@ public class EngineBridge {
         Timer.Sample sample = metricsService.startTimer();
         
         try {
+            if ("Shunn".equals(profile)) {
+                // Scene breaks must be normalised before the dash rules below turn "---" into an em-dash.
+                // Replace lines with *** or --- with a centered #
+                text = text.replaceAll("(?m)^[ \\t]*\\*\\*\\*[ \\t]*$", " # ");
+                text = text.replaceAll("(?m)^[ \\t]*---[ \\t]*$", " # ");
+            }
+
             // General typography fixes
             text = text.replaceAll("(?<=\\w)-{2,}(?=\\w)", "—"); // unspaced em-dash
-            text = text.replaceAll("(?<=\\s)-{2,}(?=\\s)", " — "); // spaced em-dash
+            text = text.replaceAll("(?<=\\s)-{2,}(?=\\s)", "—"); // spaced em-dash (keeps the existing spaces)
             text = text.replaceAll("\\.\\.\\.", "…");
 
             switch (profile) {
             case "HU":
                 // Hungarian: „low-high” quotes, »guillemets« for inner, spaced en-dash for thoughts
-                text = text.replaceAll(" \"([^\"]*)\"", " „$1”");
-                text = text.replaceAll(" '([^']*)'", " »$1«");
+                text = DOUBLE_QUOTED.matcher(text).replaceAll("$1„$2”");
+                text = SINGLE_QUOTED.matcher(text).replaceAll("$1»$2«");
                 text = text.replaceAll(" — ", " – ");
                 break;
             case "DE":
                 // German: „low-high“ quotes, ‚low-high‘ for inner, spaced en-dash for thoughts
-                text = text.replaceAll(" \"([^\"]*)\"", " „$1“");
-                text = text.replaceAll(" '([^']*)'", " ‚$1‘");
+                text = DOUBLE_QUOTED.matcher(text).replaceAll("$1„$2“");
+                text = SINGLE_QUOTED.matcher(text).replaceAll("$1‚$2‘");
                 text = text.replaceAll(" — ", " – ");
                 break;
             case "EN":
                 // English: “high-high” quotes, ‘high-high’ for inner, unspaced em-dash for breaks
-                text = text.replaceAll(" \"([^\"]*)\"", " “$1”");
-                text = text.replaceAll(" '([^']*)'", " ‘$1’");
+                text = DOUBLE_QUOTED.matcher(text).replaceAll("$1“$2”");
+                text = SINGLE_QUOTED.matcher(text).replaceAll("$1‘$2’");
                 text = text.replaceAll(" – ", "—");
                 break;
             case "Shunn":
-                // Shunn manuscript format (text-level): standardize scene breaks
-                // Replace lines with *** or --- with a centered #
-                text = text.replaceAll("(?m)^\\s*\\*\\*\\*\\s*$", " # ");
-                text = text.replaceAll("(?m)^\\s*---\\s*$", " # ");
+                // Shunn manuscript format (text-level): scene breaks were standardised above
                 break;
             default:
                 logger.warn("Unknown text cleaning profile: {}", profile);
@@ -191,7 +214,7 @@ public class EngineBridge {
             logger.error("Error during text cleaning with profile: {}", profile, e);
             metricsService.recordCounter("text.cleaning.error", "profile", profile, 
                     "error", e.getClass().getSimpleName());
-            throw new RuntimeException("Text cleaning failed", e);
+            throw new IllegalStateException("Text cleaning failed", e);
         } finally {
             metricsService.stopTimer(sample, "text.cleaning.time");
         }
@@ -273,8 +296,9 @@ public class EngineBridge {
              org.apache.poi.xwpf.usermodel.XWPFDocument document = new org.apache.poi.xwpf.usermodel.XWPFDocument(fis);
              java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(new java.io.FileOutputStream(outputFile), java.nio.charset.StandardCharsets.UTF_8))) {
 
-            org.apache.poi.xwpf.extractor.XWPFWordExtractor extractor = new org.apache.poi.xwpf.extractor.XWPFWordExtractor(document);
-            writer.write(extractor.getText());
+            try (org.apache.poi.xwpf.extractor.XWPFWordExtractor extractor = new org.apache.poi.xwpf.extractor.XWPFWordExtractor(document)) {
+                writer.write(extractor.getText());
+            }
         }
     }
 
@@ -283,11 +307,11 @@ public class EngineBridge {
         Parser parser = Parser.builder(options).build();
         com.vladsch.flexmark.util.ast.TextCollectingVisitor textVisitor = new com.vladsch.flexmark.util.ast.TextCollectingVisitor();
 
-        String markdownContent = Files.readString(inputFile.toPath());
+        String markdownContent = Files.readString(inputFile.toPath(), StandardCharsets.UTF_8);
         Node document = parser.parse(markdownContent);
         String plainText = textVisitor.collectAndGetText(document);
 
-        Files.writeString(outputFile.toPath(), plainText);
+        Files.writeString(outputFile.toPath(), plainText, StandardCharsets.UTF_8);
     }
 
     private void convertOdtToTxt(java.io.File inputFile, java.io.File outputFile) throws java.io.IOException {

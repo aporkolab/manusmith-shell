@@ -61,12 +61,12 @@ else
 fi
 
 # Download JavaFX SDK if not present
-JAVAFX_VERSION="22.0.2"
+JAVAFX_VERSION="23.0.2"
 JAVAFX_DIR="javafx-sdk-${JAVAFX_VERSION}"
 echo "📥 Checking for JavaFX SDK..."
 if [ ! -d "$JAVAFX_DIR" ]; then
     echo "📦 Downloading JavaFX SDK for macOS..."
-    curl -L -o javafx-sdk-macos.zip "https://download2.gluonhq.com/openjfx/22.0.2/openjfx-22.0.2_osx-aarch64_bin-sdk.zip"
+    curl -L -o javafx-sdk-macos.zip "https://download2.gluonhq.com/openjfx/${JAVAFX_VERSION}/openjfx-${JAVAFX_VERSION}_osx-aarch64_bin-sdk.zip"
     unzip -q javafx-sdk-macos.zip
     rm javafx-sdk-macos.zip
     echo "✅ JavaFX SDK downloaded and extracted"

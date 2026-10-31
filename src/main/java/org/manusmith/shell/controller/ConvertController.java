@@ -20,12 +20,15 @@ import org.manusmith.shell.service.StatusService;
 import org.manusmith.shell.service.ValidationService;
 import org.manusmith.shell.util.Fx;
 import org.manusmith.shell.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
 public class ConvertController {
+    private static final Logger logger = LoggerFactory.getLogger(ConvertController.class);
 
     @FXML private VBox contentBox;
     @FXML private VBox dragDropArea;
@@ -142,8 +145,7 @@ public class ConvertController {
 
         generationTask.setOnFailed(e -> {
             Throwable ex = generationTask.getException();
-            System.err.println("An error occurred during processing: " + ex.getMessage());
-            ex.printStackTrace();
+            logger.error("An error occurred during processing", ex);
             Fx.error("Error", "An unexpected error occurred:\n" + ex.getMessage());
             StatusService.getInstance().updateStatus("Error during generation.");
         });
@@ -151,7 +153,9 @@ public class ConvertController {
         progressIndicator.visibleProperty().bind(generationTask.runningProperty());
         contentBox.disableProperty().bind(generationTask.runningProperty());
 
-        new Thread(generationTask).start();
+        Thread worker = new Thread(generationTask, "shunn-convert");
+        worker.setDaemon(true);
+        worker.start();
     }
     
     private void setupDragAndDrop() {
@@ -173,17 +177,8 @@ public class ConvertController {
     
     private void handleDragOver(DragEvent event) {
         if (event.getGestureSource() != dragDropArea && event.getDragboard().hasFiles()) {
-            // Check if the dragged files contain supported formats
-            Dragboard db = event.getDragboard();
-            List<File> files = db.getFiles();
-            boolean hasSupportedFile = files.stream()
-                    .anyMatch(file -> {
-                        String fileName = file.getName().toLowerCase();
-                        return fileName.endsWith(".docx") || fileName.endsWith(".odt") || 
-                               fileName.endsWith(".md") || fileName.endsWith(".txt");
-                    });
-            
-            if (hasSupportedFile) {
+            // The Shunn conversion works on .docx input only
+            if (event.getDragboard().getFiles().stream().anyMatch(ConvertController::isDocx)) {
                 event.acceptTransferModes(TransferMode.COPY);
             }
         }
@@ -198,11 +193,7 @@ public class ConvertController {
             List<File> files = db.getFiles();
             // Find the first supported file
             Optional<File> supportedFile = files.stream()
-                    .filter(file -> {
-                        String fileName = file.getName().toLowerCase();
-                        return fileName.endsWith(".docx") || fileName.endsWith(".odt") || 
-                               fileName.endsWith(".md") || fileName.endsWith(".txt");
-                    })
+                    .filter(ConvertController::isDocx)
                     .findFirst();
                     
             if (supportedFile.isPresent()) {
@@ -214,7 +205,7 @@ public class ConvertController {
                 generateOutputFilename(file);
                 success = true;
             } else {
-                StatusService.getInstance().updateStatus("Please drop a supported file (.docx, .odt, .md, .txt).");
+                StatusService.getInstance().updateStatus("Please drop a .docx file.");
             }
         }
         
@@ -298,14 +289,18 @@ public class ConvertController {
         return outputName;
     }
     
-    private String sanitizeFilename(String filename) {
+    private static boolean isDocx(File file) {
+        return file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".docx");
+    }
+
+    static String sanitizeFilename(String filename) {
         if (filename == null) {
             return "output.docx";
         }
-        
-        // Remove or replace invalid filename characters
-        return filename.replaceAll("[<>:\"/\\|?*]", "_")
-                      .replaceAll("\s+", " ")
+
+        // Collapse whitespace, then replace characters that are invalid in file names on Windows/macOS/Linux
+        return filename.replaceAll("\\s+", " ")
+                      .replaceAll("[<>:\"/\\\\|?*\\x00-\\x1F]", "_")
                       .trim();
     }
 }

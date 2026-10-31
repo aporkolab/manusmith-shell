@@ -51,7 +51,7 @@ class ConfigurationServiceTest {
         
         assertThat(appInfo).isNotNull();
         assertThat(appInfo.getName()).isEqualTo("ManuSmith Shell");
-        assertThat(appInfo.getVersion()).isEqualTo("1.0.0-SNAPSHOT");
+        assertThat(appInfo.getVersion()).isEqualTo("2.0.0");
         assertThat(appInfo.getDescription()).isNotEmpty();
     }
 
