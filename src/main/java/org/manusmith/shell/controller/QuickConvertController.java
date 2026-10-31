@@ -10,12 +10,15 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.StackPane;
 import org.manusmith.shell.service.EngineBridge;
 import org.manusmith.shell.service.StatusService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
 public class QuickConvertController {
+    private static final Logger logger = LoggerFactory.getLogger(QuickConvertController.class);
 
     @FXML private StackPane dropZone;
     @FXML private Label dropLabel;
@@ -75,7 +78,8 @@ public class QuickConvertController {
                         }
                     }
                     String inputName = file.getName().toLowerCase(java.util.Locale.ROOT);
-                    String baseName = inputName.replaceFirst("[.][^.]+$", "");
+                    // Keep the original capitalisation of the name; only the extension check is case-insensitive.
+                    String baseName = file.getName().replaceFirst("[.][^.]+$", "");
                     String outputFileName;
 
                     if (inputName.endsWith(".txt")) {
@@ -87,7 +91,7 @@ public class QuickConvertController {
                     } else if (inputName.endsWith(".odt")) {
                         outputFileName = baseName + "_converted.txt";
                     } else {
-                        System.err.println("Skipping unsupported file type: " + file.getName());
+                        logger.info("Skipping unsupported file type: {}", file.getName());
                         continue; // Skip this file
                     }
                     File outputFile = new File(outDir, outputFileName);
@@ -107,15 +111,22 @@ public class QuickConvertController {
         conversionTask.setOnFailed(e -> {
             Throwable ex = conversionTask.getException();
             StatusService.getInstance().updateStatus("Quick Convert failed: " + ex.getMessage());
-            System.err.println("Error during Quick Convert: " + ex.getMessage());
-            ex.printStackTrace();
+            logger.error("Error during Quick Convert", ex);
         });
 
-        StatusService.getInstance().statusProperty().bind(conversionTask.messageProperty());
+        // Forward progress messages instead of binding: a bound status property would make every
+        // later updateStatus() call (from any tab) fail with "A bound value cannot be set".
+        conversionTask.messageProperty().addListener((obs, oldMessage, newMessage) -> {
+            if (newMessage != null && !newMessage.isEmpty()) {
+                StatusService.getInstance().updateStatus(newMessage);
+            }
+        });
         progressIndicator.visibleProperty().bind(conversionTask.runningProperty());
         dropLabel.visibleProperty().bind(conversionTask.runningProperty().not());
         dropZone.disableProperty().bind(conversionTask.runningProperty());
 
-        new Thread(conversionTask).start();
+        Thread worker = new Thread(conversionTask, "quick-convert");
+        worker.setDaemon(true);
+        worker.start();
     }
 }

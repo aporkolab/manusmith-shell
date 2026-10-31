@@ -12,6 +12,8 @@ import org.manusmith.shell.service.FileDialogs;
 import org.manusmith.shell.service.PreferencesService;
 import org.manusmith.shell.service.StatusService;
 import org.manusmith.shell.util.Fx;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 public class MainController {
+    private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
     @FXML private Label lblStatus;
     @FXML private ChoiceBox<String> languageSelector;
@@ -99,7 +102,7 @@ public class MainController {
             stage.setScene(new Scene(loader.load()));
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Could not open preferences window", e);
             Fx.error("Error", "Could not open preferences window.");
         }
     }

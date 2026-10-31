@@ -2,6 +2,7 @@ package org.manusmith.shell.service;
 
 import org.manusmith.shell.dto.AuthorMeta;
 
+import java.util.Objects;
 import java.util.prefs.Preferences;
 
 public class PreferencesService {
@@ -13,7 +14,6 @@ public class PreferencesService {
     private static final String ADDRESS = "address";
     private static final String EMAIL = "email";
     private static final String PHONE = "phone";
-    private static final String TITLE = "title"; // Note: Title might not be ideal to save, but let's include it.
     private static final String LANGUAGE = "language";
     private static final String ALWAYS_NORMALIZE = "always_normalize";
     private static final String DEFAULT_PROFILE = "default_profile";
@@ -25,12 +25,12 @@ public class PreferencesService {
 
     public void saveAuthorMeta(AuthorMeta meta) {
         if (meta == null) return;
-        prefs.put(AUTHOR, meta.author());
-        prefs.put(ADDRESS, meta.address());
-        prefs.put(EMAIL, meta.email());
-        prefs.put(PHONE, meta.phone());
-        // We probably don't want to save the title and word count as they are manuscript-specific.
-        // prefs.put(TITLE, meta.title());
+        // Preferences.put rejects null values, so blank form fields are stored as empty strings
+        prefs.put(AUTHOR, Objects.toString(meta.author(), ""));
+        prefs.put(ADDRESS, Objects.toString(meta.address(), ""));
+        prefs.put(EMAIL, Objects.toString(meta.email(), ""));
+        prefs.put(PHONE, Objects.toString(meta.phone(), ""));
+        // Title and word count are manuscript-specific, so they are deliberately not persisted.
     }
 
     public AuthorMeta loadAuthorMeta() {
@@ -67,6 +67,10 @@ public class PreferencesService {
     }
 
     public void setDefaultProfile(String profile) {
+        if (profile == null) {
+            prefs.remove(DEFAULT_PROFILE);
+            return;
+        }
         prefs.put(DEFAULT_PROFILE, profile);
     }
 
