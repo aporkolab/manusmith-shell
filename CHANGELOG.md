@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Dependencies: JavaFX 23.0.2, Apache POI 6.0.0, Jackson 2.22, Micrometer 1.17, Hibernate Validator 9.1, Logback 1.6, JUnit 6.1; `flexmark-all` replaced by the `flexmark` core module (smaller fat JAR); unused picocli removed.
+- Build: Maven wrapper 3.9.11, enforcer (Maven 3.9+, Java 21+), current Maven plugins, OWASP dependency-check 13.
+- CI: current major versions of all GitHub Actions; the test job runs the full `verify` build.
+
+### Fixed
+- File names with accented letters or parentheses were rejected by the security check.
+- `restrictToUserHome` accepted sibling directories sharing the home prefix.
+- Typography: quotes at the start of a line were not converted, quotes paired across paragraphs, spaced `--` produced double spaces, and Shunn `---` scene breaks became em-dashes.
+- Italic-to-underline lost text after tabs/breaks and some run formatting; tables are now covered too.
+- Quick Convert broke the status bar for the rest of the session and lower-cased output file names.
+- Closing the window without a system tray left an invisible, unclosable application.
+
+### Removed
+- Unused utility classes (AnimationUtil, AsyncTaskManager, DragDropHandler, ErrorHandlerUtil, FilePreviewUtil, KeyboardShortcutManager).
+
 ## [2.0.0] - 2025-09-15
 
 ### Added

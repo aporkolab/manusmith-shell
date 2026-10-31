@@ -24,9 +24,8 @@ chmod +x build.sh
 
 ### Building DMG Installer
 
-1. **Clone both repositories:**
+1. **Clone the repository:**
    ```bash
-   git clone <manusmith-engine-repo> manusmith-engine
    git clone <manusmith-shell-repo> manusmith-shell
    ```
 
@@ -38,7 +37,7 @@ chmod +x build.sh
 
 3. **Generated files:**
    - `target/dist/ManuSmith Shell-2.0.0.dmg` - Main installer
-   - `target/manusmith-shell-1.0.0-SNAPSHOT-obfuscated.jar` - Obfuscated JAR
+   - `target/manusmith-shell-2.0.0-obfuscated.jar` - Obfuscated JAR
 
 ### Installing on macOS
 
@@ -61,9 +60,8 @@ chmod +x build.sh
    - Download from: https://wixtoolset.org/
    - Add to system PATH
 
-2. **Clone repositories:**
+2. **Clone the repository:**
    ```cmd
-   git clone <manusmith-engine-repo> manusmith-engine
    git clone <manusmith-shell-repo> manusmith-shell
    ```
 
@@ -75,7 +73,7 @@ chmod +x build.sh
 
 4. **Generated files:**
    - `target\dist\ManuSmith Shell-2.0.0.msi` - Main installer
-   - `target\manusmith-shell-1.0.0-SNAPSHOT-obfuscated.jar` - Obfuscated JAR
+   - `target\manusmith-shell-2.0.0-obfuscated.jar` - Obfuscated JAR
 
 ### Installing on Windows
 
@@ -95,21 +93,14 @@ chmod +x build.sh
 
 ## 🔧 Manual Build Process
 
-### 1. Build Engine Dependency
-
-```bash
-cd manusmith-engine
-mvn clean install -DskipTests -Dspotbugs.skip=true -Ddependency-check.skip=true -Djpackage.skip=true
-```
-
-### 2. Build Shell with Obfuscation
+### 1. Build the Shell
 
 ```bash
 cd manusmith-shell
-mvn clean compile package -DskipTests
+./mvnw clean package -DskipTests
 ```
 
-### 3. Create Native Installer
+### 2. Create Native Installer
 
 **macOS:**
 ```bash
@@ -124,6 +115,8 @@ mvn -Pwindows-package install -DskipTests
 ## 🔒 Security Features
 
 ### Code Obfuscation
+> **Note:** the ProGuard plugin is currently disabled in `pom.xml`; the `-obfuscated.jar` produced by CI is a copy of the fat JAR.
+
 - **ProGuard integration** - Bytecode obfuscation
 - **Class name obfuscation** - Prevents reverse engineering
 - **Method renaming** - Obscures functionality
@@ -149,9 +142,9 @@ target/
 ├── dist/                                    # Native installers
 │   ├── ManuSmith Shell-2.0.0.dmg          # macOS installer
 │   └── ManuSmith Shell-2.0.0.msi          # Windows installer
-├── manusmith-shell-1.0.0-SNAPSHOT.jar     # Original JAR
-├── manusmith-shell-1.0.0-SNAPSHOT-jar-with-dependencies.jar
-└── manusmith-shell-1.0.0-SNAPSHOT-obfuscated.jar  # Protected JAR
+├── manusmith-shell-2.0.0.jar     # Original JAR
+├── manusmith-shell-2.0.0-jar-with-dependencies.jar
+└── manusmith-shell-2.0.0-obfuscated.jar  # Protected JAR
 ```
 
 ## ⚙️ Build Configuration
@@ -179,10 +172,6 @@ target/
 - Install WiX v3.x from https://wixtoolset.org/
 - Add WiX bin directory to system PATH
 
-**"manusmith-engine not found":**
-- Clone manusmith-engine to parent directory
-- Run build script from correct location
-
 **DMG/MSI creation fails:**
 - Check available disk space (>500MB recommended)
 - Ensure no antivirus interference
@@ -192,7 +181,7 @@ target/
 
 **Test obfuscated JAR:**
 ```bash
-java -jar target/manusmith-shell-1.0.0-SNAPSHOT-obfuscated.jar
+java -jar target/manusmith-shell-2.0.0-obfuscated.jar
 ```
 
 **Verify native installer:**

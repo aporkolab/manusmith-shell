@@ -11,7 +11,7 @@ A comfortable, simple **UI/CLI** that hides the engine details and completes tas
 | **MVP** (Shunn formatting) | Implemented | The `italic → underline` conversion works. |
 | **Cover Letter** | Implemented | The cover letter generator works. |
 | **TypoKit** | Implemented | Basic typographic fixes (HU/DE/EN) and scene break normalization implemented. |
-| **QuickConvert** | Fully implemented | Supported conversions: `.txt`↔`.docx`, `.md`→`.txt`, `.odt`↔`.txt`, `.odt`↔`.docx`. |
+| **QuickConvert** | Implemented | Supported conversions: `.txt`↔`.docx`, `.md`→`.txt`, `.odt`→`.txt`. |
 | **CrossClip Lite** | Implemented | System tray icon, theme switcher, and clipboard cleaning functionality. |
 
 ---
@@ -74,9 +74,8 @@ A comfortable, simple **UI/CLI** that hides the engine details and completes tas
    * Error handling → alert dialog in UI.
 
 3. **Integration**
-   * Pulls in the engine JAR as a dependency (v2.0.0).
-   * Full ODT (OpenDocument Text) support with manusmith-engine v2.0.0.
-   * The shell never implements parsing, only uses it.
+   * The shell currently runs standalone: document handling is done directly by Apache POI (DOCX), ODF Toolkit (ODT) and flexmark (Markdown).
+   * `manusmith-engine` is not a build dependency; if it comes back, its API should be wired in behind the `service` layer.
 
 ---
 
@@ -103,3 +102,37 @@ A comfortable, simple **UI/CLI** that hides the engine details and completes tas
 * Preserves formatting (including italic text) during conversions
 * Improved stability and performance
 * CI/CD integration for automated testing and deployment
+
+---
+
+## Development
+
+### Stack
+
+| Component | Version |
+| :--- | :--- |
+| Java | 21 (LTS) |
+| JavaFX | 23.0.2 (last line supporting JDK 21) |
+| Maven | 3.9+ (the bundled `./mvnw` uses 3.9.11) |
+| Apache POI | 6.0.0 |
+| ODF Toolkit (odfdom) | 0.13.0 |
+| flexmark | 0.64.8 |
+| JUnit / TestFX | 6.1 / 4.0.18 |
+
+### Commands
+
+```bash
+./mvnw clean verify -Ddependency-check.skip=true   # build + tests + SpotBugs + fat JAR
+./mvnw test                                         # tests only (headless Monocle)
+./mvnw -Prun-javafx javafx:run                      # run in dev mode (set javafx.platform in the profile: linux, win, mac-aarch64)
+java -jar target/manusmith-shell-2.0.0-jar-with-dependencies.jar
+./mvnw org.owasp:dependency-check-maven:check       # OWASP dependency check
+```
+
+Tests that use accented file names need a UTF-8 locale (e.g. `LC_ALL=C.UTF-8`); otherwise that test is skipped.
+
+### Configuration
+
+* Defaults: `src/main/resources/application.yml`.
+* User override: `~/.manusmith-shell/config/application.yml` (loaded instead of the defaults when present).
+* Environment variables: `NVD_API_KEY` (optional, only speeds up the OWASP check; a secret in CI).
